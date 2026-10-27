@@ -1,2 +1,2 @@
-# dinner
-Admin page
+# Lo family's dinner plan
+Only for limited users
