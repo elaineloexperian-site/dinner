@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>晚飯</title>
+
+<style>
+
+body{
+margin:0;
+padding:15px;
+background:#f5f7fa;
+font-family:Arial;
+}
+
+.container{
+max-width:700px;
+margin:auto;
+}
+
+.card{
+background:white;
+padding:24px;
+border-radius:16px;
+box-shadow:0 2px 10px rgba(0,0,0,.1);
+}
+
+h1{
+margin-top:0;
+text-align:center;
+}
+
+#dateDisplay{
+font-size:24px;
+font-weight:bold;
+text-align:center;
+margin-bottom:25px;
+}
+
+.person{
+margin-bottom:25px;
+}
+
+.answer{
+padding:16px;
+border:1px solid #ccc;
+border-radius:10px;
+font-size:22px;
+text-align:center;
+}
+
+.highlight{
+background:#ffe867;
+border-color:#caa500;
+font-weight:bold;
+}
+
+.updated{
+font-size:12px;
+color:#666;
+margin-top:6px;
+}
+
+#clearHighlightBtn{
+margin-top:10px;
+padding:10px 16px;
+background:#666;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+
+.refresh{
+margin-top:15px;
+font-size:12px;
+color:#777;
+text-align:center;
+}
+
+@media(max-width:600px){
+
+.answer{
+font-size:28px;
+}
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="card">
+
+<h1>羅宅晚飯</h1>
+
+<div id="dateDisplay"></div>
+
+<div class="person">
+<h2>楠</h2>
+<div id="kathy" class="answer"></div>
+<div id="kathyUpdated" class="updated"></div>
+</div>
+
+<div class="person">
+<h2>鈴</h2>
+<div id="elaine" class="answer"></div>
+<div id="elaineUpdated" class="updated"></div>
+</div>
+
+<button id="clearHighlightBtn">
+知道
+</button>
+
+<div id="refresh" class="refresh">
+Auto Refresh
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbxF3SC-VETyIgQzzlmYtZBFVsbL_RlbTYOLGXr_Uec0d8Gv9BOmv3XFxPTg9zLMY8Ut/exec";
+
+let latestData = null;
+
+function updateDate(){
+
+const hk =
+new Date(
+new Date().toLocaleString(
+"en-US",
+{
+timeZone:"Asia/Hong_Kong"
+}
+)
+);
+
+let displayDate =
+new Date(hk);
+
+let tomorrow = "";
+
+if(hk.getHours() >= 22){
+
+displayDate.setDate(
+displayDate.getDate()+1
+);
+
+tomorrow =
+" (明天)";
+}
+
+const weekday =
+new Intl.DateTimeFormat(
+"zh-HK",
+{
+weekday:"long"
+}
+).format(displayDate);
+
+const datePart =
+new Intl.DateTimeFormat(
+    "zh-HK",
+    {
+        month:"long",
+        day:"numeric"
+    }
+).format(displayDate);
+
+const weekdayPart =
+new Intl.DateTimeFormat(
+    "zh-HK",
+    {
+        weekday:"long"
+    }
+).format(displayDate);
+
+const text =
+datePart + " " + weekdayPart;
+const el =
+document.getElementById(
+"dateDisplay"
+);
+
+el.textContent =
+"📅 " + text + tomorrow;
+
+el.style.color =
+(
+weekday === "Saturday" ||
+weekday === "Sunday"
+)
+? "red"
+: "#333";
+
+}
+
+function renderData(data){
+
+const k =
+document.getElementById("kathy");
+
+const e =
+document.getElementById("elaine");
+
+k.textContent =
+    displayDinner(
+        data.kathy.dinner
+    );
+
+e.textContent =
+    displayDinner(
+        data.elaine.dinner
+    );
+ 
+k.classList.remove("highlight");
+e.classList.remove("highlight");
+ 
+if(
+data.kathy.notification === "Yes"
+){
+k.classList.add(
+"highlight"
+);
+}
+ 
+if(
+data.elaine.notification === "Yes"
+){
+e.classList.add(
+"highlight"
+);
+}
+
+function displayDinner(value){
+
+    switch(value){
+
+        case "Yes":
+            return "🍽️ 食";
+
+        case "No":
+            return "❌ 唔食";
+
+        default:
+            return value;
+
+    }
+
+}
+ 
+document.getElementById(
+"kathyUpdated"
+).textContent =
+"最後更新: " +
+(data.kathy.lastUpdated || "-");
+ 
+document.getElementById(
+"elaineUpdated"
+).textContent =
+"最後更新: " +
+(data.elaine.lastUpdated || "-");
+ 
+}
+async function loadData(){
+
+try{
+
+const response =
+await fetch(
+API_URL +
+"?t=" +
+Date.now()
+);
+
+const data =
+await response.json();
+
+latestData = data;
+
+renderData(data);
+
+document.getElementById(
+"refresh"
+).textContent =
+"Last Refreshed: "
++
+new Date()
+.toLocaleTimeString();
+
+}
+catch(err){
+
+document.getElementById(
+"refresh"
+).textContent =
+"Unable to load data";
+
+}
+
+updateDate();
+
+}
+
+document
+.getElementById(
+    "clearHighlightBtn"
+)
+.addEventListener(
+    "click",
+    async function(){
+
+        try{
+
+            await fetch(
+                `${API_URL}?action=clearNotifications`
+            );
+
+            await loadData();
+
+        }
+        catch(error){
+
+            console.error(error);
+
+        }
+
+    }
+);
+
+loadData();
+
+setInterval(
+loadData,
+60000
+);
+
+setInterval(
+updateDate,
+30000
+);
+
+</script>
+
+</body>
+</html>
